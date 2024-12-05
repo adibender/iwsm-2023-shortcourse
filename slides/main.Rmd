@@ -6,6 +6,7 @@ author: ["Andreas Bender",
 "Dpartment of Statistics, LMU MUnich"]
 output:
   xaringan::moon_reader:
+    self_contained: true
     lib_dir: libs
     seal: false
     nature:

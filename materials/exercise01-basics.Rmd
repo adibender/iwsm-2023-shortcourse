@@ -53,7 +53,7 @@ Visualize the estimated (log-)baseline hazard.
 
 ```{r}
 tumor_pam1 <- gam(
-  formula = ped_status ~ s(tend) + charlson_score + age + sex + transfusion +
+  formula = ped_status ~ s(tend, k = 20) + charlson_score + age + sex + transfusion +
     complications + metastases + resection,
   data    = tumor_ped,
   family = "poisson", # don't forget !!!
@@ -126,7 +126,7 @@ tumor_ped <- tumor_ped |>
   mutate(strata = interaction(complications, metastases))
 tumor_pam2 <- update(
   tumor_pam1,
-  . ~ . - s(tend) + s(tend, by = strata) + strata - complications - metastases,
+  . ~ . - s(tend) - metastases - complications + strata +s(tend, by = strata),
   data = tumor_ped)
 summary(tumor_pam2)
 ```
@@ -145,7 +145,7 @@ ndf_tumor <- tumor_ped |>
   add_hazard(tumor_pam2)
 
 ggplot(ndf_tumor, aes(x = tend, y = hazard)) +
-  geom_stephazard(aes(col = strata)) + 
+  geom_stephazard(aes(col = strata)) +
   geom_stepribbon(aes(ymin = ci_lower, ymax = ci_upper, fill = strata), alpha = .1)
 ```
 

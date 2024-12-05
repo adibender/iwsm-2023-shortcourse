@@ -127,7 +127,7 @@ The example follows `r Citet(bib, "beyersmann_competing_2012")`: "Competing Risk
   + death (`status` = 2): event of interest
 - variable of interest  `pneu`: A patient's pneumonia status at admission (0 = no pneumonia, 1 = pneumonia)
 
-```{r, echo = TRUE}
+```{r cr-data, echo = TRUE}
 data(sir.adm, package = "mvna")
 sir.adm |> filter(id %in% c(41, 395, 17058))
 table(sir.adm$status)
@@ -140,16 +140,16 @@ sum(sir.adm$status != 0) # observed events
 
 Data in PED format:
 
-```{r echo = TRUE}
+```{r cr-data2, echo = TRUE}
 ped <- as_ped(sir.adm, Surv(time, status)~ pneu, combine = TRUE) |>
-  mutate(cause = as.factor(cause))
+  mutate(cause = as.factor(cause), pneu = as.factor(pneu))
 glimpse(ped)
 ped |> group_by(cause) |> summarize(n_cases = sum(ped_status)) # observed events
 ```
 
 ---
 # Example: Pneumonia on admission in intensive care unit patients
-```{r echo = TRUE}
+```{r cr-data3, echo = TRUE}
 ped |>
   filter(id %in% c(41, 17058)) |>
   group_by(id, cause) |>
@@ -157,33 +157,34 @@ ped |>
 ```
 ---
 # Example: Pneumonia on admission in intensive care unit patients
-```{r echo = TRUE, output.lines=c(8:13, 17:20)}
+```{r cr-model1, echo = TRUE, output.lines=c(8:13, 17:20)}
 pam <- pamm(ped_status ~ s(tend, by = cause) + cause*pneu, data = ped)
 summary(pam)
 ```
 
-```{r echo = TRUE}
+```{r cr-model2, echo = TRUE}
 est <- c(Discharge = coef(pam)[3] |> unname(),       Death = sum(coef(pam)[3:4]))
 se <-  c(Discharge = diag(vcov(pam))[3] |> unname(), Death = sum(vcov(pam)[3:4, 3:4])) |> sqrt()
 cbind(estimate = est, lo = est - 2 * se, hi = est + 2 * se) |> exp() |> round(2)
 ```
 
 ---
-# Example: Pneumonia on admission inintensive care unit patients
+# Example: Pneumonia on admission in intensive care unit patients
 
 - pneumonia doesn't appear to have a clear effect on the death hazard
 - this does *not* imply that pneumonia has no effect on mortality
 - We want to calculate the CIF to check effect of pneumonia on probability of death
 
-```{r, echo = TRUE}
-ndf <- ped |> make_newdata(tend  = unique(tend), pneu  = unique(pneu), cause = unique(cause))
+```{r ndf, echo = TRUE}
+ndf <- ped |> 
+  make_newdata(tend  = unique(tend), pneu  = unique(pneu), cause = unique(cause))
 ndf |> group_by(cause) |> slice(1:3) |> kable()
 ```
 
 ---
 # Example: Pneumonia on admission inintensive care unit patients
 
-```{r echo = TRUE}
+```{r ndf2, echo = TRUE}
 ndf <- ndf |>
   group_by(cause, pneu) |> # important!
   add_cif(pam) |> ungroup() |>
